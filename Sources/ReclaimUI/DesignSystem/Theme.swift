@@ -29,5 +29,13 @@ extension Theme {
     public var fontDesign: Font.Design {
         .rounded
     }
+
+    public var surface: Color { panelBackground }
+    public var surfaceElevated: Color { panelBackgroundSecondary }
+    public var background: Color { windowBackground }
+    public var primaryText: Color { textPrimary }
+    public var secondaryText: Color { textSecondary }
+    public var border: Color { borderPrimary }
+    public var accent: Color { Color(red: 0.35, green: 0.75, blue: 1.0) }
 }
 

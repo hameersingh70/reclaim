@@ -376,6 +376,7 @@ await runSystemStorageTests(runner)
 registerProjectWorkspaceScannerTests(in: runner)
 registerSelfImprovementSuiteTests(in: runner)
 await runSystemPressureDiagnosticsTests(runner)
+await runExpandedFeaturesSuiteTests(runner)
 
 print("\n─────────────────────────────────────")
 print("Results: \(runner.passed) passed, \(runner.failed) failed")

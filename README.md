@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/icon.png" width="128" height="128" alt="Reclaim App Icon" />
+<img src="docs/assets/icon.webp" width="128" height="128" alt="Reclaim App Icon" />
 
 # ⚡ Reclaim
 
@@ -8,7 +8,7 @@
 
 [![Swift 6.0](https://img.shields.io/badge/Swift-6.0-F05138.svg?style=flat&logo=swift)](https://swift.org)
 [![macOS 13.0+](https://img.shields.io/badge/macOS-13.0%2B-000000.svg?style=flat&logo=apple)](https://www.apple.com/macos)
-[![Tests Passing](https://img.shields.io/badge/Tests-158%20Passing-brightgreen.svg?style=flat)](Tests/)
+[![Tests Passing](https://img.shields.io/badge/Tests-163%20Passing-brightgreen.svg?style=flat)](Tests/)
 [![Architecture](https://img.shields.io/badge/Architecture-Apple%20Silicon%20%7C%20Intel-blue.svg?style=flat)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](LICENSE)
 
@@ -33,14 +33,14 @@ Traditional Mac cleaners are built for casual consumers—opaque "black boxes" t
 ### 1. Application Uninstaller with Original Native Icons
 *Sub-second parallel discovery, real Retina app icons, and hidden Library leftover scrubbing.*
 
-<img src="docs/assets/uninstaller.png" width="900" alt="Reclaim App Uninstaller" />
+<img src="docs/assets/uninstaller.webp" width="900" alt="Reclaim App Uninstaller" />
 
 <br/><br/>
 
 ### 2. System Pressure & Bottleneck Sentinel
 *Real-time Darwin Mach VM telemetry, APFS swap thrashing diagnostics, and 1-click kernel memory relief.*
 
-<img src="docs/assets/pressure.png" width="900" alt="System Pressure & Bottleneck Insights" />
+<img src="docs/assets/pressure.webp" width="900" alt="System Pressure & Bottleneck Insights" />
 
 </div>
 
@@ -87,7 +87,7 @@ git clone https://github.com/hameersingh70/reclaim.git
 cd reclaim
 ```
 
-### 2. Run the Test Suite (158 Tests)
+### 2. Run the Test Suite (163 Tests)
 Verify the entire scanning, safety, diagnostic, and analyzer pipeline:
 ```bash
 make test
@@ -114,7 +114,7 @@ make run
 | Command | Action |
 | :--- | :--- |
 | `make build` | Compiles the release binary via Swift Package Manager |
-| `make test` | Executes the full 158-test verification suite |
+| `make test` | Executes the full 163-test verification suite |
 | `make app` | Assembles and code-signs `Reclaim.app` desktop bundle |
 | `make run` | Builds and launches `Reclaim.app` on your desktop |
 | `make icon` | Regenerates `AppIcon.icns` across all 10 Retina resolutions |
@@ -148,7 +148,7 @@ Reclaim/
 │       ├── Views/              # Modular screens (SmartScan, AppUninstaller, Pressure, etc.)
 │       └── main.swift          # App entrypoint, NSStatusBar item & window lifecycle
 └── Tests/
-    └── ReclaimTests/           # Unit & end-to-end integration tests (158 tests)
+    └── ReclaimTests/           # Unit & end-to-end integration tests (163 tests)
 ```
 
 ---

@@ -19,6 +19,10 @@ let package = Package(
             targets: ["Reclaim"]
         ),
         .executable(
+            name: "reclaim",
+            targets: ["ReclaimCLI"]
+        ),
+        .executable(
             name: "ReclaimTests",
             targets: ["ReclaimTests"]
         ),
@@ -31,6 +35,11 @@ let package = Package(
         .target(
             name: "Reclaim",
             path: "Sources/Reclaim"
+        ),
+        .executableTarget(
+            name: "ReclaimCLI",
+            dependencies: ["Reclaim"],
+            path: "Sources/ReclaimCLI"
         ),
         .executableTarget(
             name: "ReclaimTests",

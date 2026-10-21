@@ -331,117 +331,155 @@ public struct ExplorerView: View {
     // MARK: - Space Map View (DaisyDisk / Space Lens style)
 
     private var spaceMapView: some View {
-        ScrollView {
+        let totalBytes = max(1, filteredItems.reduce(0) { $0 + $1.allocatedSize })
+        return ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                // Top Storage Distribution Bar
-                let totalBytes = max(1, filteredItems.reduce(0) { $0 + $1.allocatedSize })
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("STORAGE DISTRIBUTION MAP")
-                            .font(.system(size: 10, weight: .black, design: .monospaced))
-                            .foregroundColor(.black)
-                        Spacer()
-                        Text("Total: \(ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file))")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(Color.black.opacity(0.7))
-                    }
+                distributionBar(totalBytes: totalBytes)
+                treemapSection(totalBytes: totalBytes)
+                tilesGrid(totalBytes: totalBytes)
+            }
+            .padding(16)
+        }
+    }
 
-                    // Stacked Proportional Bar
-                    GeometryReader { geo in
-                        HStack(spacing: 1.5) {
-                            ForEach(Array(filteredItems.prefix(12).enumerated()), id: \.element.id) { _, item in
-                                let fraction = max(0.015, CGFloat(item.allocatedSize) / CGFloat(totalBytes))
-                                let width = max(4, geo.size.width * fraction)
+    private func distributionBar(totalBytes: Int64) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("STORAGE DISTRIBUTION MAP")
+                    .font(.system(size: 10, weight: .black, design: .monospaced))
+                    .foregroundColor(.black)
+                Spacer()
+                Text("Total: \(ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file))")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color.black.opacity(0.7))
+            }
+
+            GeometryReader { geo in
+                HStack(spacing: 1.5) {
+                    ForEach(Array(filteredItems.prefix(12).enumerated()), id: \.element.id) { _, item in
+                        let fraction = max(0.015, CGFloat(item.allocatedSize) / CGFloat(totalBytes))
+                        let width = max(4, geo.size.width * fraction)
+                        Rectangle()
+                            .fill(categoryColor(for: item.category))
+                            .frame(width: width, height: 16)
+                            .overlay(
                                 Rectangle()
-                                    .fill(categoryColor(for: item.category))
-                                    .frame(width: width, height: 16)
-                                    .overlay(
-                                        Rectangle()
-                                            .stroke(selectedItem?.id == item.id ? Color.black : Color.clear, lineWidth: 1.5)
-                                    )
-                                    .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.15)) {
-                                            selectedItem = item
-                                        }
-                                    }
+                                    .stroke(selectedItem?.id == item.id ? Color.black : Color.clear, lineWidth: 1.5)
+                            )
+                            .onTapGesture {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    selectedItem = item
+                                }
                             }
-                        }
-                        .cornerRadius(4)
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.black, lineWidth: 1.5))
                     }
-                    .frame(height: 16)
                 }
-                .padding(14)
-                .background(Color.white)
-                .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.black, lineWidth: 1.5))
-                .shadow(color: .black, radius: 0, x: 2, y: 2)
+                .cornerRadius(4)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.black, lineWidth: 1.5))
+            }
+            .frame(height: 16)
+        }
+        .padding(14)
+        .background(Color.white)
+        .cornerRadius(8)
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.black, lineWidth: 1.5))
+        .shadow(color: .black, radius: 0, x: 2, y: 2)
+    }
 
-                // Visual Tiles Grid
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 10)], spacing: 10) {
-                    ForEach(filteredItems, id: \.id) { item in
-                        let isSelected = selectedItem?.id == item.id
-                        let fraction = Double(item.allocatedSize) / Double(totalBytes)
-                        let percentStr = String(format: "%.1f%%", fraction * 100)
+    private func treemapSection(totalBytes: Int64) -> some View {
+        let treemapNodes = filteredItems.prefix(25).map { item in
+            TreemapNode(
+                id: item.id.uuidString,
+                name: URL(fileURLWithPath: item.path).lastPathComponent,
+                path: item.path,
+                value: item.allocatedSize,
+                color: categoryColor(for: item.category),
+                categoryName: item.category.displayName
+            )
+        }
 
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                selectedItem = item
-                            }
-                        } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: categoryIcon(for: item.category))
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(.black)
-                                        .frame(width: 22, height: 22)
-                                        .background(categoryColor(for: item.category))
-                                        .cornerRadius(4)
-                                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.black, lineWidth: 1))
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("HIERARCHICAL TREEMAP ALLOCATION")
+                .font(.system(size: 10, weight: .black, design: .monospaced))
+                .foregroundColor(.black)
 
-                                    Spacer()
-
-                                    Text(percentStr)
-                                        .font(.system(size: 10, weight: .black, design: .monospaced))
-                                        .foregroundColor(Color.black.opacity(0.6))
-                                }
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(URL(fileURLWithPath: item.path).lastPathComponent)
-                                        .font(.system(size: 12, weight: .black, design: .rounded))
-                                        .foregroundColor(.black)
-                                        .lineLimit(1)
-
-                                    Text(ByteCountFormatter.string(fromByteCount: item.allocatedSize, countStyle: .file))
-                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                        .foregroundColor(Color(red: 0.85, green: 0.35, blue: 0.05))
-                                }
-
-                                // Mini progress bar representing relative weight
-                                GeometryReader { g in
-                                    ZStack(alignment: .leading) {
-                                        Rectangle()
-                                            .fill(Color.black.opacity(0.08))
-                                            .frame(height: 4)
-                                        Rectangle()
-                                            .fill(categoryColor(for: item.category))
-                                            .frame(width: max(3, g.size.width * CGFloat(min(1.0, fraction * 2.5))), height: 4)
-                                    }
-                                    .cornerRadius(2)
-                                }
-                                .frame(height: 4)
-                            }
-                            .padding(12)
-                            .background(isSelected ? Color(red: 1.00, green: 0.95, blue: 0.80) : Color.white)
-                            .cornerRadius(8)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.black, lineWidth: isSelected ? 2 : 1.2))
-                            .shadow(color: .black, radius: 0, x: isSelected ? 2.5 : 1.5, y: isSelected ? 2.5 : 1.5)
-                        }
-                        .buttonStyle(.plain)
+            TreemapView(nodes: treemapNodes, theme: theme) { selectedNode in
+                if let found = filteredItems.first(where: { $0.id.uuidString == selectedNode.id }) {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        selectedItem = found
                     }
                 }
             }
-            .padding(16)
+            .frame(height: 240)
+        }
+        .padding(14)
+        .background(Color.white)
+        .cornerRadius(8)
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.black, lineWidth: 1.5))
+        .shadow(color: .black, radius: 0, x: 2, y: 2)
+    }
+
+    private func tilesGrid(totalBytes: Int64) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 10)], spacing: 10) {
+            ForEach(filteredItems, id: \.id) { item in
+                let isSelected = selectedItem?.id == item.id
+                let fraction = Double(item.allocatedSize) / Double(totalBytes)
+                let percentStr = String(format: "%.1f%%", fraction * 100)
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        selectedItem = item
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: categoryIcon(for: item.category))
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.black)
+                                .frame(width: 22, height: 22)
+                                .background(categoryColor(for: item.category))
+                                .cornerRadius(4)
+                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.black, lineWidth: 1))
+
+                            Spacer()
+
+                            Text(percentStr)
+                                .font(.system(size: 10, weight: .black, design: .monospaced))
+                                .foregroundColor(Color.black.opacity(0.6))
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(URL(fileURLWithPath: item.path).lastPathComponent)
+                                .font(.system(size: 12, weight: .black, design: .rounded))
+                                .foregroundColor(.black)
+                                .lineLimit(1)
+
+                            Text(ByteCountFormatter.string(fromByteCount: item.allocatedSize, countStyle: .file))
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(Color(red: 0.85, green: 0.35, blue: 0.05))
+                        }
+
+                        // Mini progress bar representing relative weight
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.08))
+                                    .frame(height: 4)
+                                Rectangle()
+                                    .fill(categoryColor(for: item.category))
+                                    .frame(width: max(3, g.size.width * CGFloat(min(1.0, fraction * 2.5))), height: 4)
+                            }
+                            .cornerRadius(2)
+                        }
+                        .frame(height: 4)
+                    }
+                    .padding(12)
+                    .background(isSelected ? Color(red: 1.00, green: 0.95, blue: 0.80) : Color.white)
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.black, lineWidth: isSelected ? 2 : 1.2))
+                    .shadow(color: .black, radius: 0, x: isSelected ? 2.5 : 1.5, y: isSelected ? 2.5 : 1.5)
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 

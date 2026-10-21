@@ -1,9 +1,10 @@
 // LightweightSentinelMonitor.swift
 // Reclaim Core — System Diagnostics & Pressure Insights
 //
-// Ultra-lightweight kernel-level memory pressure sentinel.
+// Ultra-lightweight kernel-level memory pressure & low-disk storage sentinel.
 // Uses Darwin DISPATCH_SOURCE_TYPE_MEMORYPRESSURE to sleep at 0% CPU,
-// waking up only when the Mach VM kernel signals memory pressure transitions.
+// waking up only when Mach VM signals memory pressure transitions or when
+// local SSD storage headroom drops below the safety threshold.
 
 import Foundation
 import Dispatch
@@ -13,6 +14,7 @@ import Dispatch
 public protocol LightweightSentinelMonitorDelegate: AnyObject, Sendable {
     func sentinelDidDetectPressureChange(report: PressureReport)
     func sentinelDidDetectSlownessAlert(report: PressureReport, message: String)
+    func sentinelDidDetectLowStorage(availableBytes: Int64, message: String)
 }
 
 // MARK: - Sentinel Monitor Implementation
@@ -27,13 +29,18 @@ public final class LightweightSentinelMonitor: @unchecked Sendable {
 
     private var isRunning = false
     private var lastAlertTimestamp: Date?
+    private var lastStorageAlertTimestamp: Date?
     private var lastObservedLevel: MemoryPressureLevel = .normal
     private let alertCooldownSeconds: TimeInterval = 1800 // 30 minutes cooldown
+
+    /// Storage threshold below which proactive warnings are triggered (Default: 15 GB)
+    public var lowStorageThresholdBytes: Int64 = 15 * 1024 * 1024 * 1024
 
     public weak var delegate: LightweightSentinelMonitorDelegate?
 
     public var onPressureChanged: (@Sendable (PressureReport) -> Void)?
     public var onSlownessDetected: (@Sendable (PressureReport, String) -> Void)?
+    public var onLowStorageDetected: (@Sendable (Int64, String) -> Void)?
 
     public init(diagnostics: SystemPressureDiagnosticsProtocol = SystemPressureDiagnostics()) {
         self.diagnostics = diagnostics
@@ -90,6 +97,7 @@ public final class LightweightSentinelMonitor: @unchecked Sendable {
             guard let self = self else { return }
             Task {
                 await self.evaluateSystemPressure(reason: "Periodic Check")
+                self.evaluateStorageHeadroom()
             }
         }
 
@@ -97,7 +105,43 @@ public final class LightweightSentinelMonitor: @unchecked Sendable {
         self.fallbackTimer = timer
     }
 
-    // MARK: - Evaluation & Debouncing
+    // MARK: - Storage Evaluation
+
+    public func evaluateStorageHeadroom() {
+        let homeURL = FileManager.default.homeDirectoryForCurrentUser
+        guard let values = try? homeURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey]) else {
+            return
+        }
+
+        let available: Int64
+        if let important = values.volumeAvailableCapacityForImportantUsage {
+            available = important
+        } else if let general = values.volumeAvailableCapacity {
+            available = Int64(general)
+        } else {
+            return
+        }
+
+        let now = Date()
+        if available < lowStorageThresholdBytes {
+            let shouldAlert: Bool
+            if let last = lastStorageAlertTimestamp {
+                shouldAlert = now.timeIntervalSince(last) >= alertCooldownSeconds
+            } else {
+                shouldAlert = true
+            }
+
+            if shouldAlert {
+                lastStorageAlertTimestamp = now
+                let freeStr = ByteCountFormatter.string(fromByteCount: available, countStyle: .file)
+                let msg = "Low Disk Space: Only \(freeStr) remaining on primary volume. Click to review safe developer cleanup plan."
+                onLowStorageDetected?(available, msg)
+                delegate?.sentinelDidDetectLowStorage(availableBytes: available, message: msg)
+            }
+        }
+    }
+
+    // MARK: - Pressure Evaluation & Debouncing
 
     public func evaluateSystemPressure(reason: String = "Manual") async {
         let report = await diagnostics.generateReport()

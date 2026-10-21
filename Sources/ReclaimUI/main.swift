@@ -38,6 +38,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NotificationCenter.default.post(name: NSNotification.Name("ReclaimSlownessAlert"), object: message)
             }
         }
+        sentinel.onLowStorageDetected = { availableBytes, message in
+            Task { @MainActor in
+                NotificationCenter.default.post(name: NSNotification.Name("ReclaimLowStorageAlert"), object: message)
+            }
+        }
         sentinel.start()
     }
 
@@ -215,6 +220,10 @@ enum NavigationSection: Hashable {
     case shredder
     case backups
     case largeFiles
+    // Developer Tuning & Power Tools
+    case tweaks
+    case daemons
+    case duplicates
     // Utilities
     case explorer
     case history
@@ -254,6 +263,9 @@ struct MainShellView: View {
         if CommandLine.arguments.contains("--maintenance") { return .maintenance }
         if CommandLine.arguments.contains("--shredder") { return .shredder }
         if CommandLine.arguments.contains("--pressure") { return .pressureInsights }
+        if CommandLine.arguments.contains("--tweaks") { return .tweaks }
+        if CommandLine.arguments.contains("--daemons") { return .daemons }
+        if CommandLine.arguments.contains("--duplicates") { return .duplicates }
         return .smartScan
     }()
     @State private var activeScanTask: Task<Void, Never>? = nil
@@ -481,6 +493,20 @@ struct MainShellView: View {
                 categorySidebarLink(category: .pythonEnv,    section: .pythonEnv,    icon: "terminal.fill",      color: .teal)
             }
 
+            Section("Developer Tuning & Power Tools") {
+                NavigationLink(value: NavigationSection.tweaks) {
+                    sidebarItemRow(icon: "slider.horizontal.3", title: "Developer Tweaks", color: Color(red: 0.85, green: 0.45, blue: 0.95))
+                }
+
+                NavigationLink(value: NavigationSection.daemons) {
+                    sidebarItemRow(icon: "cpu.fill", title: "Background Daemons", color: Color(red: 0.30, green: 0.70, blue: 0.90))
+                }
+
+                NavigationLink(value: NavigationSection.duplicates) {
+                    sidebarItemRow(icon: "square.on.square.dashed", title: "Duplicate Assets", color: Color(red: 1.00, green: 0.60, blue: 0.20))
+                }
+            }
+
             Section("System Utilities") {
                 NavigationLink(value: NavigationSection.uninstaller) {
                     sidebarItemRow(icon: "app.badge.fill", title: "App Uninstaller", color: Color(red: 1.00, green: 0.40, blue: 0.42))
@@ -636,6 +662,10 @@ struct MainShellView: View {
         case .shredder:     FileShredderView(appState: appState, theme: themeManager.currentTheme)
         case .backups:      EcosystemCleanerView(category: .backups,      appState: appState, theme: themeManager.currentTheme, onScanCategory: { startTargetedDeveloperScan(category: .backups) },      onDeleteItem: deleteSingleItem)
         case .largeFiles:   LargeFilesView(appState: appState, theme: themeManager.currentTheme, onDeleteItem: deleteSingleItem)
+        // Developer Tuning & Power Tools
+        case .tweaks:       DeveloperTweaksView(appState: appState, themeManager: themeManager)
+        case .daemons:      LaunchAgentsView(appState: appState, themeManager: themeManager)
+        case .duplicates:   DuplicateAssetsView(appState: appState, themeManager: themeManager)
         case .explorer:         ExplorerView(appState: appState, theme: themeManager.currentTheme, onDeleteItem: deleteSingleItem)
         case .history:          ReceiptsHistoryView(appState: appState, theme: themeManager.currentTheme)
         case .pressureInsights: PressureInsightsView(appState: appState, themeManager: themeManager)
