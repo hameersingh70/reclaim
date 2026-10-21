@@ -1,0 +1,24 @@
+# Swift Package Manager
+.build/
+Packages/
+Package.pins
+Package.resolved
+*.xcodeproj
+*.xcworkspace
+.swiftpm/
+
+# Application Bundle Output (built via scripts/bundle_app.sh)
+Reclaim.app/
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Temporary / Scratch files
+*.log
+/tmp/
+.user_uploaded/
