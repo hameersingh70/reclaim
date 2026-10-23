@@ -17,14 +17,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let sentinel = LightweightSentinelMonitor.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ProcessInfo.processInfo.disableAutomaticTermination("Reclaim Sentinel and User Interface")
+        ProcessInfo.processInfo.disableSuddenTermination()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         setupStatusBar()
         startSentinel()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            NSApp.activate(ignoringOtherApps: true)
+            for window in NSApp.windows {
+                if window.canBecomeKey {
+                    window.title = "Reclaim — Developer Storage & System Optimizer"
+                    window.makeKeyAndOrderFront(nil)
+                    window.center()
+                    break
+                }
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false // Stay running in menu bar as lightweight background sentinel
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            for window in sender.windows {
+                if window.canBecomeKey {
+                    window.makeKeyAndOrderFront(self)
+                    return true
+                }
+            }
+        }
+        return true
     }
 
     private func startSentinel() {
@@ -186,8 +212,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openAppAction() {
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first {
-            window.makeKeyAndOrderFront(nil)
+        for window in NSApp.windows {
+            if window.canBecomeKey {
+                window.makeKeyAndOrderFront(nil)
+                return
+            }
         }
     }
 
